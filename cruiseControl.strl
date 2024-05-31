@@ -29,24 +29,26 @@ var state := "OFF" : string in  % OFF, ON, STDBY, DISABLE
 var cruiseSpeed := 0.0f : float in
 var throttleCmd := 0.0f : float in
 var currentSpeed := 0.0f : float in
+var accelValue := 0.0f : float in
 
 % Initialize
 emit CruiseState(state);
 
 % Main thread
 loop
-    await On;
-    state := "ON";
-    emit CruiseState(state);
-	%cruiseSpeed := ?Speed; 
-	%emit CruiseSpeed(cruiseSpeed);
     loop
         abort
+		await On;
+		state := "ON";
+		emit CruiseState(state);
+		%cruiseSpeed := ?Speed; 
+		%emit CruiseSpeed(cruiseSpeed);
             loop
 				abort
 					await Speed;
 					currentSpeed := ?Speed;
-					if currentSpeed <= SpeedMax and currentSpeed >= SpeedMin then
+                    accelValue := ?Accel;
+					if currentSpeed <= SpeedMax and currentSpeed >= SpeedMin and accelValue <= 0.0f then
 						state := "ON";
 						emit CruiseState(state);
 						emit CruiseSpeed(currentSpeed);
@@ -63,11 +65,11 @@ loop
         when Off do
 			state := "OFF";  % Transition to OFF
 			emit CruiseState(state);
-			await On;
         end abort;
     end loop
 end loop
 
+end var
 end var
 end var
 end var
