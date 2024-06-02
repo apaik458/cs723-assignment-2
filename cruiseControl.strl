@@ -19,7 +19,8 @@ input On, Off, Resume, Set, QuickDecel, QuickAccel;
 input Accel: float;
 input Brake: float;
 input Speed: float;
-output message: string;
+output CarSpeedControlMessage: string;
+output StateChangeMessage : string;
 output CruiseState : integer;
 output CruiseSpeed : float;
 output ThrottleCmd : float;
@@ -34,11 +35,16 @@ var brakeValue := 0.0f : float in
 var error := 0.0f : float in
 var integral := 0.0f : float in
 
+% Define signals for mutual exclusion
+signal QuickDecelActive in
+signal QuickAccelActive in
+
 % Initialize
 emit CruiseState(state);
 
 % Main thread
 loop
+	emit StateChangeMessage("DID NOT CHANGE");
 	abort
 	await On;
 	state := 1;
@@ -47,16 +53,20 @@ loop
 			await Speed;
 			if ?Brake > PedalsMin then
 				state := 2;
+				emit StateChangeMessage("Changed to STDBY");
 			elsif ?Speed <= SpeedMax and ?Speed >= SpeedMin and ?Accel < PedalsMin then
 				state := 1;
+				emit StateChangeMessage("Changed to ON");
 			else
 				state := 3;  % Transition to DISABLE if conditions are not met
+				emit StateChangeMessage("Changed to DISABLE");
 			end if;
 			emit CruiseState(state);
 		end loop
 	when Off do
 		state := 0;  % Transition to OFF
 		emit CruiseState(state);
+		emit StateChangeMessage("Changed to OFF");
 	end abort;
 end loop
 || 
@@ -68,20 +78,20 @@ loop
 	if ?CruiseState = 1 or ?CruiseState = 2 or ?CruiseState = 3 then
 		% Has just gone into ON state
 		if not (pre(?CruiseState) = 1) then
-			emit message("Car Speed Regulating");
+			emit CarSpeedControlMessage("Car Speed Regulating");
 			emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
 		else
 			emit ThrottleCmd(regulateThrottle(0, ?CruiseSpeed, ?Speed));
 		end if;	
 	else
-		emit message("Car Speed Accelerator");
+		emit CarSpeedControlMessage("Car Speed Accelerator");
 		emit ThrottleCmd(?Accel);
 	end if;
 end loop
 ||
 loop
 	await On;
-
+	emit CruiseSpeed(?Speed);
 	if ?CruiseState = 1 or ?CruiseState = 2 or ?CruiseState = 3 then
 	% Manage speed only when in ON, STDBY, DISABLE states
 		loop
@@ -91,23 +101,31 @@ loop
 		||
 		loop
 			await QuickAccel;
-			if ?CruiseSpeed + SpeedInc > SpeedMax then
-				emit CruiseSpeed(SpeedMax);
-			else
-				emit CruiseSpeed(?CruiseSpeed + SpeedInc)
-			end if;
+			present(QuickDecelActive) else
+                emit QuickAccelActive;
+				if ?CruiseSpeed + SpeedInc > SpeedMax then
+					emit CruiseSpeed(SpeedMax);
+				else
+					emit CruiseSpeed(?CruiseSpeed + SpeedInc)
+				end if;
+			end present;
 		end loop
 		||
 		loop
 			await QuickDecel;
-			if ?CruiseSpeed - SpeedInc < SpeedMax then
-				emit CruiseSpeed(SpeedMin);
-			else
-				emit CruiseSpeed(?CruiseSpeed - SpeedInc)
-			end if;
+			present(QuickAccelActive) else
+				emit QuickDecelActive;
+				if ?CruiseSpeed - SpeedInc < SpeedMax then
+					emit CruiseSpeed(SpeedMin);
+				else
+					emit CruiseSpeed(?CruiseSpeed - SpeedInc)
+				end if;
+			end present;
 		end loop
 	end if;
 end loop
+end signal
+end signal
 end var	
 end var
 end var
