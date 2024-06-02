@@ -19,12 +19,12 @@ input Accel: float;
 input Brake: float;
 input Speed: float;
 output message: string;
-output CruiseState : string;
+output CruiseState : integer;
 output CruiseSpeed : float;
 output ThrottleCmd : float;
 
 % Define initial variables
-var state := "OFF" : string in  % OFF, ON, STDBY, DISABLE
+var state := 0 : integer in % OFF, ON, STDBY, DISABLE
 var cruiseSpeed := 0.0f : float in
 var throttleCmd := 0.0f : float in
 var currentSpeed := 0.0f : float in
@@ -40,7 +40,7 @@ emit CruiseState(state);
 loop
 	abort
 	await On;
-	state := "ON";
+	state := 1;
 	emit CruiseState(state);
 		loop
 			await Speed;
@@ -49,19 +49,19 @@ loop
 			brakeValue := ?Brake;
 			
 			if brakeValue > PedalsMin then
-				state := "STDBY";
+				state := 2;
 			elsif currentSpeed <= SpeedMax and currentSpeed >= SpeedMin and accelValue < PedalsMin then
-				state := "ON";
+				state := 1;
 				emit CruiseSpeed(currentSpeed);
 			else
-				state := "DISABLE";  % Transition to DISABLE if conditions are not met
+				state := 3;  % Transition to DISABLE if conditions are not met
 				emit CruiseSpeed(currentSpeed);
 			end if;
 				
 		emit CruiseState(state);
 		end loop
 	when Off do
-		state := "OFF";  % Transition to OFF
+		state := 0;  % Transition to OFF
 		emit CruiseState(state);
 	end abort;
 end loop
@@ -70,9 +70,9 @@ loop
 	pause;
 	% Cruise Control will be automatically regulated
 	% Using C for throttle regulation
-	if ?CruiseState = "ON" then
+	if ?CruiseState = 1 or ?CruiseState = 2 or ?CruiseState = 3 then
 		% Has just gone into ON state
-		if not (pre(?CruiseState) = "ON") then
+		if not (pre(?CruiseState) = 1) then
 			emit message("Car Speed Regulating");
 			%emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
 		%else
@@ -83,7 +83,7 @@ loop
 		emit ThrottleCmd(?Accel);
 	end if;
 end loop
-end var
+end var	
 end var
 end var
 end var
