@@ -30,6 +30,7 @@ var cruiseSpeed := 0.0f : float in
 var throttleCmd := 0.0f : float in
 var currentSpeed := 0.0f : float in
 var accelValue := 0.0f : float in
+var brakeValue := 0.0f : float in
 
 % Initialize
 emit CruiseState(state);
@@ -41,23 +42,22 @@ loop
 	state := "ON";
 	emit CruiseState(state);
 		loop
-			abort
-				await Speed;
-				currentSpeed := ?Speed;
-				accelValue := ?Accel;
-				if currentSpeed <= SpeedMax and currentSpeed >= SpeedMin and accelValue <= 0.0f then
-					state := "ON";
-					emit CruiseState(state);
-					emit CruiseSpeed(currentSpeed);
-				else
-					state := "DISABLE";  % Transition to DISABLE if conditions are not met
-					emit CruiseState(state);
-					emit CruiseSpeed(currentSpeed);
-				end if;
-			when Brake do
+			await Speed;
+			currentSpeed := ?Speed;
+			accelValue := ?Accel;
+			brakeValue := ?Brake;
+			
+			if brakeValue > PedalsMin then
 				state := "STDBY";
-				emit CruiseState(state);
-			end abort;
+			elsif currentSpeed <= SpeedMax and currentSpeed >= SpeedMin and accelValue < PedalsMin then
+				state := "ON";
+				emit CruiseSpeed(currentSpeed);
+			else
+				state := "DISABLE";  % Transition to DISABLE if conditions are not met
+				emit CruiseSpeed(currentSpeed);
+			end if;
+				
+		emit CruiseState(state);
 		end loop
 	when Off do
 		state := "OFF";  % Transition to OFF
@@ -65,6 +65,7 @@ loop
 	end abort;
 end loop
 
+end var
 end var
 end var
 end var
