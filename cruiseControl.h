@@ -5,3 +5,6 @@ void recv1(char** data);
 void adding(unsigned int data);
 int remov();
 int outCount();
+#include <stdbool.h>
+float saturateThrottle(float throttleIn, bool* saturate);
+float regulateThrottle(int isGoingOn, float cruiseSpeed, float vehicleSpeed);
