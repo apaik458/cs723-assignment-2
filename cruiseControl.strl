@@ -24,7 +24,7 @@ output CruiseState : string;
 output CruiseSpeed : float;
 output ThrottleCmd : float;
 
-% Define initial state
+% Define initial variables
 var state := "OFF" : string in  % OFF, ON, STDBY, DISABLE
 var cruiseSpeed := 0.0f : float in
 var throttleCmd := 0.0f : float in
@@ -36,37 +36,33 @@ emit CruiseState(state);
 
 % Main thread
 loop
-    loop
-        abort
-		await On;
-		state := "ON";
-		emit CruiseState(state);
-		%cruiseSpeed := ?Speed; 
-		%emit CruiseSpeed(cruiseSpeed);
-            loop
-				abort
-					await Speed;
-					currentSpeed := ?Speed;
-                    accelValue := ?Accel;
-					if currentSpeed <= SpeedMax and currentSpeed >= SpeedMin and accelValue <= 0.0f then
-						state := "ON";
-						emit CruiseState(state);
-						emit CruiseSpeed(currentSpeed);
-					else
-						state := "DISABLE";  % Transition to DISABLE if conditions are not met
-						emit CruiseState(state);
-						emit CruiseSpeed(currentSpeed);
-					end if;
-				when Brake do
-					state := "STDBY";
+	abort
+	await On;
+	state := "ON";
+	emit CruiseState(state);
+		loop
+			abort
+				await Speed;
+				currentSpeed := ?Speed;
+				accelValue := ?Accel;
+				if currentSpeed <= SpeedMax and currentSpeed >= SpeedMin and accelValue <= 0.0f then
+					state := "ON";
 					emit CruiseState(state);
-				end abort;
-            end loop
-        when Off do
-			state := "OFF";  % Transition to OFF
-			emit CruiseState(state);
-        end abort;
-    end loop
+					emit CruiseSpeed(currentSpeed);
+				else
+					state := "DISABLE";  % Transition to DISABLE if conditions are not met
+					emit CruiseState(state);
+					emit CruiseSpeed(currentSpeed);
+				end if;
+			when Brake do
+				state := "STDBY";
+				emit CruiseState(state);
+			end abort;
+		end loop
+	when Off do
+		state := "OFF";  % Transition to OFF
+		emit CruiseState(state);
+	end abort;
 end loop
 
 end var
@@ -76,3 +72,4 @@ end var
 end var
 
 end module
+
