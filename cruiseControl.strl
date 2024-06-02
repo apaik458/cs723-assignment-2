@@ -1,10 +1,9 @@
 module cruiseControl:
 
+% Cruise Control Implementation
+
 %declarations of data-handling functions in C
 function regulateThrottle(integer, float, float): float;
-
-% Cruise Control Implementation
-% emit message ("in on state now");
 
 % Global Constants
 constant SpeedMin = 30.0f : float;
@@ -13,9 +12,6 @@ constant Kp = 8.113f : float;
 constant Ki = 0.5f : float;
 constant ThrottleSatMax = 45.0f : float;
 constant PedalsMin = 3.0f : float;
-
-procedure send()(integer);
-function outCount(): integer;
 
 % Interface declarations
 input On, Off, Resume, Set, QuickDecel, QuickAccel;
@@ -71,16 +67,16 @@ loop
 end loop
 || 
 loop
-	await CruiseState;
+	pause;
 	% Cruise Control will be automatically regulated
 	% Using C for throttle regulation
 	if ?CruiseState = "ON" then
 		% Has just gone into ON state
 		if not (pre(?CruiseState) = "ON") then
 			emit message("Car Speed Regulating");
-			emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
-		else
-			emit ThrottleCmd(regulateThrottle(0, ?CruiseSpeed, ?Speed));
+			%emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
+		%else
+			%emit ThrottleCmd(regulateThrottle(0, ?CruiseSpeed, ?Speed));
 		end if;	
 	else
 		emit message("Car Speed Accelerator");
