@@ -47,18 +47,15 @@ loop
 			currentSpeed := ?Speed;
 			accelValue := ?Accel;
 			brakeValue := ?Brake;
-			
 			if brakeValue > PedalsMin then
 				state := 2;
 			elsif currentSpeed <= SpeedMax and currentSpeed >= SpeedMin and accelValue < PedalsMin then
 				state := 1;
-				emit CruiseSpeed(currentSpeed);
 			else
 				state := 3;  % Transition to DISABLE if conditions are not met
-				emit CruiseSpeed(currentSpeed);
 			end if;
-				
-		emit CruiseState(state);
+			emit CruiseSpeed(currentSpeed);
+			emit CruiseState(state);
 		end loop
 	when Off do
 		state := 0;  % Transition to OFF
@@ -67,16 +64,17 @@ loop
 end loop
 || 
 loop
-	pause;
+	await CruiseState;
+	await CruiseSpeed;
 	% Cruise Control will be automatically regulated
 	% Using C for throttle regulation
 	if ?CruiseState = 1 or ?CruiseState = 2 or ?CruiseState = 3 then
 		% Has just gone into ON state
 		if not (pre(?CruiseState) = 1) then
 			emit message("Car Speed Regulating");
-			%emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
-		%else
-			%emit ThrottleCmd(regulateThrottle(0, ?CruiseSpeed, ?Speed));
+			emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
+		else
+			emit ThrottleCmd(regulateThrottle(0, ?CruiseSpeed, ?Speed));
 		end if;	
 	else
 		emit message("Car Speed Accelerator");
