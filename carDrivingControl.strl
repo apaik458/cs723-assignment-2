@@ -1,0 +1,38 @@
+module carDrivingControl:
+
+% Global Constants
+constant Kp = 8.113f : float;
+constant Ki = 0.5f : float;
+constant ThrottleSatMax = 45.0f : float;
+
+% Interface declarations
+input cruiseSpeed : float;
+output throttleCmd : float;
+
+% Define initial state
+var currentCruiseSpeed := 0.0f : float in
+var throttleCmd := 0.0f : float in
+var vCurrentSpeed := 0.0f : float in
+var accelValue := 0.0f : float in
+var error := 0.0f : float in
+var proportional : float in
+var integral : float in
+
+% Initialize
+emit CruiseState(state);
+
+% Main thread
+loop
+    await cruiseSpeed;
+    currentCruiseSpeed := cruiseSpeed;
+    await currentSpeed;
+    vCurrentSpeed := currentSpeed;
+
+    error := currentCruiseSpeed - vCurrentSpeed;
+    proportional := Kp * error;
+    integral := Ki;
+
+    throttleCmd := proportional + integral;
+end loop
+
+end module

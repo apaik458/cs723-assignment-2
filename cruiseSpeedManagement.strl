@@ -1,0 +1,35 @@
+module cruiseSpeedManagement:
+
+% Global Constants
+constant SpeedMin = 30.0f : float;
+constant SpeedMax = 150.0f : float;
+
+% Interface declarations
+input currentSpeed : float;
+input On, Off, Set, QuickDecel, QuickAccel;
+input speedInc, speedMax, speedMin;
+
+input Accel: float;
+input Brake: float;
+input Speed: float;
+input State : string;
+output CruiseState : string;
+output CruiseSpeed : float;
+
+% Define initial state
+var cruiseSpeed := 0.0f : float in
+var throttleCmd := 0.0f : float in
+var currentSpeed := 0.0f : float in
+var accelValue := 0.0f : float in
+
+% Initialize
+emit CruiseState(state);
+
+% Main thread
+loop
+    await On;
+    cruiseSpeed := currentSpeed;
+    
+end loop
+
+end module

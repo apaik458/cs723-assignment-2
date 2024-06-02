@@ -1,0 +1,38 @@
+module pedalDetection:
+
+% Global Constants
+constant PedalsMin = 0.03f : float;
+
+% Interface declarations
+input Accel, Brake : float;
+output accelPress, brakePress;
+
+% Define initial state
+var accelState := "NOTPRESSED" : string in  % PRESSED, NOTPRESSED
+var brakeState := "NOTPRESSED" : string in  % PRESSED, NOTPRESSED
+var currentAccel := 0.0f : float in
+var currentBrake := 0.0f : float in
+
+% Accel detection thread
+loop
+    await Accel;
+    currentAccel := ?Accel;
+    if currentAccel > PedalsMin then
+        accelState := "PRESSED";
+    else
+        accelState := "NOTPRESSED";
+    end if;
+end loop
+
+% Brake detection thread
+loop
+    await Brake;
+    currentBrake := ?Brake;
+    if currentBrake > PedalsMin then
+        brakeState := "PRESSED";
+    else
+        brakeState := "NOTPRESSED";
+    end if;
+end loop
+
+end module
