@@ -8,6 +8,7 @@ function regulateThrottle(integer, float, float): float;
 % Global Constants
 constant SpeedMin = 30.0f : float;
 constant SpeedMax = 150.0f : float;
+constant SpeedInc = 2.5f : float;
 constant Kp = 8.113f : float;
 constant Ki = 0.5f : float;
 constant ThrottleSatMax = 45.0f : float;
@@ -44,17 +45,13 @@ loop
 	emit CruiseState(state);
 		loop
 			await Speed;
-			currentSpeed := ?Speed;
-			accelValue := ?Accel;
-			brakeValue := ?Brake;
-			if brakeValue > PedalsMin then
+			if ?Brake > PedalsMin then
 				state := 2;
-			elsif currentSpeed <= SpeedMax and currentSpeed >= SpeedMin and accelValue < PedalsMin then
+			elsif ?Speed <= SpeedMax and ?Speed >= SpeedMin and ?Accel < PedalsMin then
 				state := 1;
 			else
 				state := 3;  % Transition to DISABLE if conditions are not met
 			end if;
-			emit CruiseSpeed(currentSpeed);
 			emit CruiseState(state);
 		end loop
 	when Off do
@@ -64,31 +61,52 @@ loop
 end loop
 || 
 loop
+	await CruiseState;
+	await CruiseSpeed;
+	% Cruise Control will be automatically regulated
+	% Using C for throttle regulation
+	if ?CruiseState = 1 or ?CruiseState = 2 or ?CruiseState = 3 then
+		% Has just gone into ON state
+		if not (pre(?CruiseState) = 1) then
+			emit message("Car Speed Regulating");
+			emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
+		else
+			emit ThrottleCmd(regulateThrottle(0, ?CruiseSpeed, ?Speed));
+		end if;	
+	else
+		emit message("Car Speed Accelerator");
+		emit ThrottleCmd(?Accel);
+	end if;
+end loop
+||
+loop
 	await On;
-	emit CruiseSpeed(currentSpeed);
 
-	loop
-    	await Set;
-    	emit CruiseSpeed(currentSpeed);
-	end loop
-	||
-	loop
-		await QuickAccel;
-		if CruiseSpeed + SpeedInc > SpeedMax then
-			emit CruiseSpeed(SpeedMax);
-		else
-			emit CruiseSpeed(CruiseSpeed + SpeedInc);
-		end if
-	end loop
-	||
-	loop
-		await QuickDecel;
-		if CruiseSpeed - SpeedInc < SpeedMin then
-			emit CruiseSpeed(SpeedMin);
-		else
-			emit CruiseSpeed(CruiseSpeed - SpeedInc);
-		end if
-	end loop
+	if ?CruiseState = 1 or ?CruiseState = 2 or ?CruiseState = 3 then
+	% Manage speed only when in ON, STDBY, DISABLE states
+		loop
+			await Set;
+			emit CruiseSpeed(?Speed);
+		end loop
+		||
+		loop
+			await QuickAccel;
+			if ?CruiseSpeed + SpeedInc > SpeedMax then
+				emit CruiseSpeed(SpeedMax);
+			else
+				emit CruiseSpeed(?CruiseSpeed + SpeedInc)
+			end if;
+		end loop
+		||
+		loop
+			await QuickDecel;
+			if ?CruiseSpeed - SpeedInc < SpeedMax then
+				emit CruiseSpeed(SpeedMin);
+			else
+				emit CruiseSpeed(?CruiseSpeed - SpeedInc)
+			end if;
+		end loop
+	end if;
 end loop
 end var	
 end var
@@ -99,4 +117,3 @@ end var
 end var
 end var
 end module
-
